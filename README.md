@@ -34,7 +34,7 @@ advanced-llm-systems-learning/
 
 以下是本学习计划的核心路线图，强调通用原理和多框架对比。
 
-### 0. LLM 与系统基础理论
+### [0. LLM 与系统基础理论](00_foundations/README.md)
 
 *   **目标**：构建坚实的理论基础，理解 LLM 系统面临的核心问题。
 *   **内容**：
