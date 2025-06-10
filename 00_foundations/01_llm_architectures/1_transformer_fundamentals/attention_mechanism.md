@@ -125,27 +125,27 @@ Given Queries $Q$, Keys $K$, and Values $V$:
 
 1.  **Linear Projections:** Project Q, K, V into `h` different subspaces using learned weight matrices $W_i^Q \in \mathbb{R}^{d_{\text{model}} \times d_k}$, $W_i^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$, $W_i^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$ . \
 for each head $i=1, ..., h$. Typically, $d_k = d_v = d_{\text{model}} / h$. \
-    $
+    $$
     Q_i = Q W_i^Q \\
     K_i = K W_i^K \\
     V_i = V W_i^V
-    $
+    $$
 
 2.  **Apply Scaled Dot-Product Attention:** Apply the attention function to each projected set in parallel:
-    $
+    $$
     \text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i
-    $
+    $$
 
 3.  **Concatenate:** Concatenate the outputs from all heads:
-    $
+    $$
     \text{Concat}(\text{head}_1, ..., \text{head}_h) = \text{Concat}( \text{Attention}(Q_1, K_1, V_1), ..., \text{Attention}(Q_h, K_h, V_h) )
-    $
+    $$
     The resulting matrix has dimensions `[sequence_length_q, h * d_v]`.
 
 4.  **Final Linear Projection:** Project the concatenated output using another learned weight matrix $W^O \in \mathbb{R}^{h d_v \times d_{\text{model}}}$:
-    $
+    $$
     \text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
-    $
+    $$
     The final output has dimensions `[sequence_length_q, d_model]`.
 
 **Code Example (Conceptual, often implemented within frameworks like PyTorch/TensorFlow):**
@@ -340,23 +340,23 @@ During autoregressive decoding, the Keys and Values corresponding to the previou
 **Structure:**
 
 1.  **Query Projections:** Project the input Q using `h` different learned weight matrices $W_i^Q \in \mathbb{R}^{d_{\text{model}} \times d_k}$ for each head $i=1, ..., h$.
-    $
+    $$
     Q_i = Q W_i^Q
-    $
+    $$
 2.  **Shared Key/Value Projections:** Project the input K and V using *single* learned weight matrices $W^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$ and $W^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$.
-    $
+    $$
     K_{\text{shared}} = K W^K \\
     V_{\text{shared}} = V W^V
-    $
+    $$
     *(Note: $d_k$ and $d_v$ here usually refer to the dimension per head, matching the $Q_i$ dimensions)*
 3.  **Apply Scaled Dot-Product Attention:** Apply the attention function for each query head $Q_i$ using the *shared* $K_{\text{shared}}$ and $V_{\text{shared}}$:
-    $
+    $$
     \text{head}_i = \text{Attention}(Q_i, K_{\text{shared}}, V_{\text{shared}}) = \text{softmax}\left(\frac{Q_i K_{\text{shared}}^T}{\sqrt{d_k}}\right)V_{\text{shared}}
-    $
+    $$
 4.  **Concatenate & Final Projection:** Concatenate the outputs from all heads and apply a final linear projection $W^O$, similar to MHA:
-    $
+    $$
     \text{MultiQuery}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
-    $
+    $$
 
 **Comparison to MHA:**
 *   **Pros:** Significantly faster inference, lower memory usage for KV cache.
@@ -417,23 +417,23 @@ Let `h` be the total number of Query heads, and `g` be the number of Key/Value h
 *   If `g == 1`, GQA is equivalent to MQA.
 
 1.  **Query Projections:** Project the input Q using `h` different learned weight matrices $W_i^Q \in \mathbb{R}^{d_{\text{model}} \times d_k}$ for each query head $i=1, ..., h$.
-    $
+    $$
     Q_i = Q W_i^Q
-    $
+    $$
 2.  **Grouped Key/Value Projections:** Project the input K and V using `g` different learned weight matrices $W_j^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$ and $W_j^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$ for each group $j=1, ..., g$.
-    $
+    $$
     K_j = K W_j^K \\
     V_j = V W_j^V
-    $
+    $$
 3.  **Assign Q heads to K/V groups:** Each Query head $Q_i$ is assigned to one of the K/V groups. Typically, heads $i = (j-1) \times (h/g) + 1$ to $j \times (h/g)$ are assigned to group $j$.
 4.  **Apply Scaled Dot-Product Attention:** Apply the attention function for each query head $Q_i$ using the Key $K_j$ and Value $V_j$ corresponding to its assigned group $j$.
-    $
+    $$
     \text{head}_i = \text{Attention}(Q_i, K_j, V_j) \quad \text{where } Q_i \text{ belongs to group } j
-    $
+    $$
 5.  **Concatenate & Final Projection:** Concatenate the outputs from all `h` heads and apply a final linear projection $W^O$, identical to MHA/MQA:
-    $
+    $$
     \text{GroupedQuery}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
-    $
+    $$
 
 **Comparison to MHA/MQA:**
 *   GQA interpolates between MHA and MQA in terms of performance and quality.
