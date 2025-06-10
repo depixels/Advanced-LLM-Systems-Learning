@@ -132,8 +132,8 @@ for each head $i=1, ..., h$. Typically, $d_k = d_v = d_{\text{model}} / h$. \
     V_i = V W_i^V$
 
 2.  **Apply Scaled Dot-Product Attention:** Apply the attention function to each projected set in parallel:
-    $\text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i$ 
-    $ \text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i$ 
+    $\text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i$ \\
+    $ \text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i$ \\
     $\text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i $ 
 
 3.  **Concatenate:** Concatenate the outputs from all heads:
