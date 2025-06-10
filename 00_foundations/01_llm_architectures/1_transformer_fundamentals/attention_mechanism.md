@@ -340,9 +340,13 @@ During autoregressive decoding, the Keys and Values corresponding to the previou
     V_{\text{shared}} = V W^V$ 
     *(Note: $d_k$ and $d_v$ here usually refer to the dimension per head, matching the $Q_i$ dimensions)*
 3.  **Apply Scaled Dot-Product Attention:** Apply the attention function for each query head $Q_i$ using the *shared* $K_{\text{shared}}$ and $V_{\text{shared}}$:
-    $\text{head}_i = \text{Attention}(Q_i, K_{\text{shared}}, V_{\text{shared}}) = \text{softmax}\left(\frac{Q_i K_{\text{shared}}^T}{\sqrt{d_k}}\right)V_{\text{shared}}$
+```math
+\text{head}_i = \text{Attention}(Q_i, K_{\text{shared}}, V_{\text{shared}}) = \text{softmax}\left(\frac{Q_i K_{\text{shared}}^T}{\sqrt{d_k}}\right)V_{\text{shared}}
+```
 4.  **Concatenate & Final Projection:** Concatenate the outputs from all heads and apply a final linear projection $W^O$, similar to MHA:
-    $\text{MultiQuery}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O$ 
+```math
+\text{MultiQuery}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
+```
 
 **Comparison to MHA:**
 *   **Pros:** Significantly faster inference, lower memory usage for KV cache.
