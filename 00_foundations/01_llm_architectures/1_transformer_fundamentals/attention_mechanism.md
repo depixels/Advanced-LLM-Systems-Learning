@@ -125,21 +125,15 @@ Given Queries $Q$, Keys $K$, and Values $V$:
 
 1.  **Linear Projections:** Project Q, K, V into `h` different subspaces using learned weight matrices $W_i^Q \in \mathbb{R}^{d_{\text{model}} \times d_k}$, $W_i^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$, $W_i^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$ . \
 for each head $i=1, ..., h$. Typically, $d_k = d_v = d_{\text{model}} / h$. \
-    $$
-    Q_i = Q W_i^Q \\
+    $Q_i = Q W_i^Q \\
     K_i = K W_i^K \\
-    V_i = V W_i^V
-    $$
+    V_i = V W_i^V$
 
 2.  **Apply Scaled Dot-Product Attention:** Apply the attention function to each projected set in parallel:
-    $$
-    \text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i
-    $$
+    $text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right)V_i$ 
 
 3.  **Concatenate:** Concatenate the outputs from all heads:
-    $$
-    \text{Concat}(\text{head}_1, ..., \text{head}_h) = \text{Concat}( \text{Attention}(Q_1, K_1, V_1), ..., \text{Attention}(Q_h, K_h, V_h) )
-    $$
+    $text{Concat}(\text{head}_1, ..., \text{head}_h) = \text{Concat}( \text{Attention}(Q_1, K_1, V_1), ..., \text{Attention}(Q_h, K_h, V_h) )$ 
     The resulting matrix has dimensions `[sequence_length_q, h * d_v]`.
 
 4.  **Final Linear Projection:** Project the concatenated output using another learned weight matrix $W^O \in \mathbb{R}^{h d_v \times d_{\text{model}}}$:
