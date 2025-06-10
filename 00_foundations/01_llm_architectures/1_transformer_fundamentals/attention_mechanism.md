@@ -326,3 +326,160 @@ The `mask` argument in the `scaled_dot_product_attention` function (shown in the
 ```
 
 This ensures that padded positions or future positions (depending on the mask type) have near-zero attention weights after the softmax operation.
+
+### 3. Multi-Query Attention (MQA)
+
+**Concept:**
+Multi-Query Attention is an optimization of Multi-Head Attention (MHA) primarily designed to reduce the memory bandwidth requirements and computational cost during the *decoding* (autoregressive generation) phase of Transformers. In standard MHA, each head has its own Query (Q), Key (K), and Value (V) projection matrices. In MQA, while each head still has its own Q projection, all heads *share* a single Key (K) and Value (V) projection.
+
+**Motivation:**
+During autoregressive decoding, the Keys and Values corresponding to the previously generated tokens (the "KV cache") need to be stored and accessed at each step. In MHA, the size of this cache scales with the number of heads. By sharing the K and V projections, MQA significantly reduces the size of the KV cache, leading to:
+*   Faster inference due to less data being read from memory (memory bandwidth is often a bottleneck).
+*   Reduced memory footprint, allowing larger models or longer contexts to fit within memory constraints.
+
+**Structure:**
+
+1.  **Query Projections:** Project the input Q using `h` different learned weight matrices $W_i^Q \in \mathbb{R}^{d_{\text{model}} \times d_k}$ for each head $i=1, ..., h$.
+    $
+    Q_i = Q W_i^Q
+    $
+2.  **Shared Key/Value Projections:** Project the input K and V using *single* learned weight matrices $W^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$ and $W^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$.
+    $
+    K_{\text{shared}} = K W^K \\
+    V_{\text{shared}} = V W^V
+    $
+    *(Note: $d_k$ and $d_v$ here usually refer to the dimension per head, matching the $Q_i$ dimensions)*
+3.  **Apply Scaled Dot-Product Attention:** Apply the attention function for each query head $Q_i$ using the *shared* $K_{\text{shared}}$ and $V_{\text{shared}}$:
+    $
+    \text{head}_i = \text{Attention}(Q_i, K_{\text{shared}}, V_{\text{shared}}) = \text{softmax}\left(\frac{Q_i K_{\text{shared}}^T}{\sqrt{d_k}}\right)V_{\text{shared}}
+    $
+4.  **Concatenate & Final Projection:** Concatenate the outputs from all heads and apply a final linear projection $W^O$, similar to MHA:
+    $
+    \text{MultiQuery}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
+    $
+
+**Comparison to MHA:**
+*   **Pros:** Significantly faster inference, lower memory usage for KV cache.
+*   **Cons:** Potential for slight quality degradation compared to MHA, as the representational capacity of Keys and Values is reduced (shared across heads). However, studies often show minimal impact on quality for many tasks.
+
+**Code Conceptual Changes:**
+Compared to the MHA code example, the main changes would be:
+*   Only define `W_k` and `W_v` once (not per head or split dimensionally in the same way).
+*   When splitting heads, only `q_proj` needs splitting into `num_heads`. `k_proj` and `v_proj` are used directly (or perhaps broadcasted) in the `scaled_dot_product_attention` call for each head. The `scaled_dot_product_attention` function itself doesn't change, but the inputs `K` and `V` passed to it would be the same for all heads.
+
+```python
+# Conceptual modification within MultiHeadAttention class for MQA
+# ... (init remains similar, but W_k, W_v represent the single shared projection)
+
+# --- Inside call method ---
+# 1. Linear projections
+q_proj = np.matmul(q, self.W_q) # Shape: (batch_size, seq_len_q, d_model)
+# Shared K and V projections (assuming W_k, W_v now map d_model -> d_k directly)
+# For simplicity, let's assume d_k = d_model / num_heads is the dimension for the shared K/V
+# In practice, the exact dimensions might vary. Let's assume W_k, W_v map to d_k
+# shared_W_k = np.random.randn(d_model, self.d_k) # Example shared weight
+# shared_W_v = np.random.randn(d_model, self.d_k) # Example shared weight (d_v = d_k often)
+# k_shared = np.matmul(k, shared_W_k) # Shape: (batch_size, seq_len_k, d_k)
+# v_shared = np.matmul(v, shared_W_v) # Shape: (batch_size, seq_len_k, d_k)
+
+# --- Simplified view ---
+# Assume W_k, W_v project to d_model first, then we extract the relevant part?
+# Or, more likely, W_q projects to d_model, W_k/W_v project to d_k directly.
+# Let's stick to the high-level concept:
+k_shared = np.matmul(k, self.W_k) # Projects k to the shared key dimension/representation
+v_shared = np.matmul(v, self.W_v) # Projects v to the shared value dimension/representation
+
+# 2. Split only Query heads
+q_split = self.split_heads(q_proj, batch_size) # (batch_size, num_heads, seq_len_q, d_k)
+
+# 3. Scaled dot-product attention (using shared K/V for all heads)
+# Need to adapt scaled_dot_product_attention or loop/broadcast carefully
+# Conceptually: for each head 'i' in q_split: attention(q_split[:, i, :, :], k_shared, v_shared)
+# A broadcasted implementation is more efficient:
+# k_shared_b = np.expand_dims(k_shared, axis=1) # (batch_size, 1, seq_len_k, d_k)
+# v_shared_b = np.expand_dims(v_shared, axis=1) # (batch_size, 1, seq_len_k, d_k)
+# scaled_attention, attention_weights = scaled_dot_product_attention(
+#     q_split, k_shared_b, v_shared_b, mask) # K/V are broadcast across num_heads dim
+
+# ... (rest remains similar: transpose, concatenate, final projection) ...
+# Note: This code snippet is highly conceptual and needs careful implementation
+#       regarding dimensions and broadcasting in a real framework.
+```
+
+### 4. Grouped-Query Attention (GQA)
+
+**Concept:**
+Grouped-Query Attention is proposed as a middle ground between Multi-Head Attention (MHA) and Multi-Query Attention (MQA). Instead of having one Key/Value pair per Query head (MHA) or one Key/Value pair shared by all Query heads (MQA), GQA groups the Query heads and assigns a single Key/Value pair to each group.
+
+**Structure:**
+Let `h` be the total number of Query heads, and `g` be the number of Key/Value head groups (where `g` is a divisor of `h`, and `1 <= g <= h`).
+*   If `g == h`, GQA is equivalent to MHA.
+*   If `g == 1`, GQA is equivalent to MQA.
+
+1.  **Query Projections:** Project the input Q using `h` different learned weight matrices $W_i^Q \in \mathbb{R}^{d_{\text{model}} \times d_k}$ for each query head $i=1, ..., h$.
+    $
+    Q_i = Q W_i^Q
+    $
+2.  **Grouped Key/Value Projections:** Project the input K and V using `g` different learned weight matrices $W_j^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$ and $W_j^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$ for each group $j=1, ..., g$.
+    $
+    K_j = K W_j^K \\
+    V_j = V W_j^V
+    $
+3.  **Assign Q heads to K/V groups:** Each Query head $Q_i$ is assigned to one of the K/V groups. Typically, heads $i = (j-1) \times (h/g) + 1$ to $j \times (h/g)$ are assigned to group $j$.
+4.  **Apply Scaled Dot-Product Attention:** Apply the attention function for each query head $Q_i$ using the Key $K_j$ and Value $V_j$ corresponding to its assigned group $j$.
+    $
+    \text{head}_i = \text{Attention}(Q_i, K_j, V_j) \quad \text{where } Q_i \text{ belongs to group } j
+    $
+5.  **Concatenate & Final Projection:** Concatenate the outputs from all `h` heads and apply a final linear projection $W^O$, identical to MHA/MQA:
+    $
+    \text{GroupedQuery}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O
+    $
+
+**Comparison to MHA/MQA:**
+*   GQA interpolates between MHA and MQA in terms of performance and quality.
+*   It reduces the KV cache size compared to MHA (though not as much as MQA).
+*   It often retains quality closer to MHA compared to MQA, while still offering significant inference speedups. It provides a tunable knob (`g`, the number of K/V groups) to balance this trade-off.
+
+**Code Conceptual Changes:**
+*   Requires defining `g` sets of K/V projection weights.
+*   The `split_heads` logic might need adjustment, or the attention calculation needs to route the correct K/V group to the corresponding Q heads.
+*   One common implementation strategy involves replicating the K/V heads for each group to match the number of Q heads within that group before the main `scaled_dot_product_attention` call, effectively making it look like MHA temporarily but with shared weights across the replicated heads within a group.
+
+```python
+# Conceptual modification within MultiHeadAttention class for GQA
+# ... (init needs num_kv_heads or num_groups 'g')
+
+# self.num_kv_heads = g
+# self.num_q_per_kv = self.num_heads // self.num_kv_heads
+
+# W_k, W_v might now represent projections for the 'g' groups,
+# e.g., shape (d_model, g * d_k) or similar, needing splitting later.
+# Or define g separate weight matrices.
+
+# --- Inside call method ---
+# 1. Linear projections
+q_proj = np.matmul(q, self.W_q) # (batch_size, seq_len_q, d_model)
+k_proj = np.matmul(k, self.W_k) # (batch_size, seq_len_k, g * d_k) - Example shape
+v_proj = np.matmul(v, self.W_v) # (batch_size, seq_len_k, g * d_k) - Example shape
+
+# 2. Split Q heads normally, split K/V heads into groups
+q_split = self.split_heads(q_proj, batch_size) # (batch_size, h, seq_len_q, d_k)
+
+# Split K/V into 'g' groups
+# k_proj_g = k_proj.reshape(batch_size, -1, self.num_kv_heads, self.d_k)
+# k_split_g = k_proj_g.transpose(0, 2, 1, 3) # (batch_size, g, seq_len_k, d_k)
+# v_split_g = ... (similarly)
+
+# 3. Replicate K/V heads to match Q heads for efficient computation
+# k_replicated = np.repeat(k_split_g, self.num_q_per_kv, axis=1) # (batch_size, h, seq_len_k, d_k)
+# v_replicated = np.repeat(v_split_g, self.num_q_per_kv, axis=1) # (batch_size, h, seq_len_k, d_k)
+
+# 4. Scaled dot-product attention (now looks like MHA, but K/V were shared per group)
+# scaled_attention, attention_weights = scaled_dot_product_attention(
+#     q_split, k_replicated, v_replicated, mask)
+
+# ... (rest remains similar: transpose, concatenate, final projection) ...
+# Note: Again, highly conceptual. Frameworks provide optimized implementations.
+```
+
+These variants, MQA and GQA, are crucial for deploying large Transformer models efficiently, especially for tasks involving long sequence generation.
