@@ -19,7 +19,9 @@ The core idea is to compute attention scores based on the similarity between a "
 The Scaled Dot-Product Attention is calculated as follows:
 
 
-$ \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$
+```math
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+```
 
 
 Where:
