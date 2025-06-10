@@ -30,7 +30,7 @@ Where:
 -   $V$ is the matrix of values (shape: `[sequence_length_k, d_v]`)
 -   $d_k$ is the dimension of the keys (and queries). Scaling by $\sqrt{d_k}$ prevents the dot products from becoming too large, which could push the softmax function into regions with very small gradients.
 -   $QK^T$ computes the dot product similarity between each query and all keys (shape: `[sequence_length_q, sequence_length_k]`).
--   $ \text{softmax}(\cdot)$ is applied row-wise to the similarity scores to obtain attention weights that sum to 1 (shape: `[sequence_length_q, sequence_length_k]`).
+-   $\text{softmax}(\cdot)$ is applied row-wise to the similarity scores to obtain attention weights that sum to 1 (shape: `[sequence_length_q, sequence_length_k]`).
 -   The final matrix multiplication with $V$ computes the weighted sum of values based on the attention weights (shape: `[sequence_length_q, d_v]`).
 
 ## 4. Code Example (using NumPy)
