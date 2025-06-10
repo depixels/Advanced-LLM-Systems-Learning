@@ -17,24 +17,24 @@ Where `x` is the input to the sub-layer (e.g., the output of the previous layer 
 For a given input vector $x$ (representing the features for a single position in the sequence, i.e., a vector of size $d_{\text{model}}$), Layer Normalization first calculates the mean ($\mu$) and variance ($\sigma^2$) across the feature dimension:
 
 1.  **Calculate Mean:**
-    $
+    ```math
     \mu = \frac{1}{d_{\text{model}}} \sum_{i=1}^{d_{\text{model}}} x_i
-    $
+    ```
 
 2.  **Calculate Variance:**
-    $
+    ```math
     \sigma^2 = \frac{1}{d_{\text{model}}} \sum_{i=1}^{d_{\text{model}}} (x_i - \mu)^2
-    $
+    ```
 
 3.  **Normalize:** Normalize the input vector $x$ using the calculated mean and variance. A small epsilon ($\epsilon$) is added to the variance for numerical stability (to avoid division by zero).
-    $
+    ```math
     \hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}}
-    $
+    ```
 
 4.  **Scale and Shift:** Apply learnable scale ($\gamma$) and shift ($\beta$) parameters. These parameters allow the network to learn the optimal scale and mean for the normalized outputs, potentially recovering the original representation if needed. Both $\gamma$ and $\beta$ are vectors of size $d_{\text{model}}$ and are learned during training.
-    $
+    ```math
     \text{LayerNorm}(x)_i = \gamma_i \hat{x}_i + \beta_i
-    $
+    ```
 
 The final output $\text{LayerNorm}(x)$ has the same dimension as the input $x$.
 

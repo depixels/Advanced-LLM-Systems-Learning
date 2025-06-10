@@ -16,15 +16,15 @@ The inner dimension $d_{ff}$ is typically larger than $d_{\text{model}}$, often 
 
 For an input vector $x$ (representing the output of the attention sub-layer for a single position), the FFN computation is:
 
-$
+```math
 \text{FFN}(x) = \text{Linear}_2(\text{Activation}(\text{Linear}_1(x)))
-$
+```
 
 Using specific weight matrices ($W_1, W_2$) and bias vectors ($b_1, b_2$), and ReLU as the activation:
 
-$
+```math
 \text{FFN}(x) = \max(0, xW_1 + b_1) W_2 + b_2
-$
+```
 
 Where:
 -   $x \in \mathbb{R}^{d_{\text{model}}}$ is the input vector for a specific position.

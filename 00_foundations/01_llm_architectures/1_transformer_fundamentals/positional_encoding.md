@@ -14,12 +14,12 @@ The original Transformer paper proposed using sine and cosine functions of diffe
 **Formula:**
 For a token at position `pos` in the sequence (where `pos` is 0-indexed) and dimension `i` within the embedding vector (where `i` ranges from 0 to $d_{\text{model}}-1$), the positional encoding `PE` is calculated as follows:
 
-$
+```math
 PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i / d_{\text{model}}}}\right)
-$
-$
+```
+```math
 PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i / d_{\text{model}}}}\right)
-$
+```
 
 Where:
 *   `pos` is the position of the token in the sequence (0, 1, 2, ...).
