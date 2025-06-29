@@ -7,7 +7,7 @@ This section explores the fundamentals of Reinforcement Learning from Human Feed
 ### 1. Reinforcement Learning
 
 Core concepts and algorithms from reinforcement learning that form the foundation of RLHF.
-
+![rl mindmap](./img/rl.png)
 *   [**MDP Framework**](./1_reinforcement_learning/mdp_framework.md): Introduction to Markov Decision Processes, the mathematical framework for modeling decision-making.
 *   [**Value Functions**](./1_reinforcement_learning/value_functions.md): Understanding state-value and action-value functions which are central to many RL algorithms.
 *   [**Policy Methods**](./1_reinforcement_learning/policy_methods.md): An overview of different policy-based reinforcement learning methods.
